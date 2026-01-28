@@ -45,11 +45,11 @@ def word_counts(file):
     sorted_dictionary = sorted(count_for_word.items(), key=lambda x: x[1], reverse=True)
 
     popular_words = []
-    for x in sorted_dictionary[:200]:
+    for x in sorted_dictionary[50:250]:
         word = x[0]  # first element of tuple is the word
         popular_words.append(word)
 
-    #return the top 200
+    #return the 50-250 most popular words
     return popular_words
 
 print(f"top 200 positive review words {word_counts(positive_reviews)}\n" )
@@ -75,10 +75,12 @@ def binary_classifier(sentence):
         if word in negative_keywords:
             negative_word_count += 1
 
-    if positive_word_count >= negative_word_count:
+    if positive_word_count > negative_word_count:
         type = 'positive'
-    else:
+    elif positive_word_count < negative_word_count:
         type = 'negative'
+    else: 
+        type = 'undetermined'
 
     return type
 
