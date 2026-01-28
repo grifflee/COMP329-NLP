@@ -28,7 +28,8 @@ list_of_negative_words = ["would've", "reeks", "empty", "forgot", "obvious", "ha
 ''' 
 
 
-# function to calculate the top 200 words in each file
+# originally was a function to calculate the top 200 words in each file
+# changed to 50-250 most popular words because the first 50 were super similar
 def word_counts(file):
 
     count_for_word = {}
@@ -65,10 +66,12 @@ def binary_classifier(sentence):
     # classifier is only using a lowercase word bank
     sentence = sentence.lower().split()
 
+    # initializing variables
     positive_word_count = 0
     negative_word_count = 0
     type = ''
 
+    #increment word count counters
     for word in sentence:
         if word in positive_keywords:
             positive_word_count += 1
@@ -84,12 +87,14 @@ def binary_classifier(sentence):
 
     return type
 
+# function to calculate the accuracy when testing each file
 def accuracy_of_classifier(review_file, type_of_file):
     sum_correct = 0
     for sentence in review_file:
         if binary_classifier(sentence) == type_of_file:
             sum_correct += 1
 
+    # accuracy calculation 
     accuracy = sum_correct / len(review_file)
 
     return accuracy
