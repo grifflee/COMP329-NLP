@@ -1,17 +1,4 @@
 
-# function to load the review files
-# each film review line should load as an element 
-def load_files(x):
-    with open(x, 'r') as file:
-        film_reviews = file.readlines()
-     # list with 
-    film_reviews = [review.strip() for review in film_reviews]
-    return film_reviews
-
-# calling the load_files function on the two files
-negative_reviews = load_files("rt-polarity.neg")
-positive_reviews = load_files("rt-polarity.pos")
-    
 #print(negative_reviews)
 #print(positive_reviews)
 #print(len(negative_reviews))
@@ -26,6 +13,15 @@ list_of_positive_words = ["great", "fresh", "superb", "excellent", "charisma", "
 list_of_negative_words = ["would've", "reeks", "empty", "forgot", "obvious", "hastily", "bad", "horrible", "bogging", "superficial",
 "poor", "overinflated", "ugly", "weird", "little", "sluggish", "slow", "mindless", "junk", "waste", ""]
 ''' 
+
+# function to load the review files
+# each film review line should load as an element 
+def load_files(x):
+    with open(x, 'r') as file:
+        film_reviews = file.readlines()
+     # list with 
+    film_reviews = [review.strip() for review in film_reviews]
+    return film_reviews
 
 
 # originally was a function to calculate the top 200 words in each file
@@ -53,13 +49,6 @@ def word_counts(file):
     #return the 50-250 most popular words
     return popular_words
 
-print(f"top 200 positive review words {word_counts(positive_reviews)}\n" )
-print(f"top 200 negative review words {word_counts(negative_reviews)}\n")
-
-positive_keywords = word_counts(positive_reviews)
-negative_keywords = word_counts(negative_reviews)
-
-
 def binary_classifier(sentence):
 
     # make all the words in the sentence lower case and separated 
@@ -78,6 +67,7 @@ def binary_classifier(sentence):
         if word in negative_keywords:
             negative_word_count += 1
 
+    # determining classification based on word counts
     if positive_word_count > negative_word_count:
         type = 'positive'
     elif positive_word_count < negative_word_count:
@@ -99,12 +89,24 @@ def accuracy_of_classifier(review_file, type_of_file):
 
     return accuracy
 
-print(f"The accuracy of the classifier on the positive movie reviews: {accuracy_of_classifier(positive_reviews, 'positive')}")
-print(f"The accuracy of the classifier on the negative movie reviews: {accuracy_of_classifier(negative_reviews, 'negative')}")
 
+if __name__ == "__main__":
+    # Your code here
+    
+    # calling the load_files function on the two files
+    negative_reviews = load_files("rt-polarity.neg")
+    positive_reviews = load_files("rt-polarity.pos")
 
+    # print(f"top 200 positive review words {word_counts(positive_reviews)}\n" )
+    # print(f"top 200 negative review words {word_counts(negative_reviews)}\n")
 
+    positive_keywords = word_counts(positive_reviews)
+    negative_keywords = word_counts(negative_reviews)
 
+    # this is the only important block of output
+    # this shows the classifier accuracy by testing it on the original data set (the movie review files)
+    print(f"The accuracy of the classifier on the positive movie reviews: {accuracy_of_classifier(positive_reviews, 'positive')}")
+    print(f"The accuracy of the classifier on the negative movie reviews: {accuracy_of_classifier(negative_reviews, 'negative')}")
 
 
 
