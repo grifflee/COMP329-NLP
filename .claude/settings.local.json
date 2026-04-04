@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 neural_net_test/05_transformer.py)"
+    ]
+  }
+}

@@ -94,7 +94,7 @@ from shared.preprocessing import load_data, VOCAB_SIZE, MAX_LEN
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
-    Input, Embedding, Dense, Dropout, GlobalAveragePooling1D,
+    Input, Embedding, Dense, Dropout,
     LayerNormalization, MultiHeadAttention, Add
 )
 
@@ -186,14 +186,16 @@ class TransformerBlock(tf.keras.layers.Layer):
         self.dropout1 = Dropout(dropout_rate)
         self.dropout2 = Dropout(dropout_rate)
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, mask=None, training=False):
         # ── Self-Attention ──────────────────────────────────────────
         # query=key=value=inputs because it's SELF-attention
         # (each word attends to all other words in the same sequence)
+        # The attention_mask tells it to IGNORE padding tokens (zeros)
         attn_output = self.attention(
             query=inputs,
             key=inputs,
             value=inputs,
+            attention_mask=mask,
             training=training
         )
         attn_output = self.dropout1(attn_output, training=training)
@@ -224,6 +226,30 @@ class TransformerBlock(tf.keras.layers.Layer):
         return config
 
 
+class PaddingMask(tf.keras.layers.Layer):
+    """
+    Creates an attention mask from padded input sequences.
+    Padding tokens (0) become False, real tokens become True.
+    Output shape: (batch, 1, seq_len) — ready for MultiHeadAttention.
+    """
+    def call(self, inputs):
+        mask = tf.not_equal(inputs, 0)    # (batch, seq_len)
+        return mask[:, tf.newaxis, :]     # (batch, 1, seq_len)
+
+
+class MaskedGlobalAveragePooling1D(tf.keras.layers.Layer):
+    """
+    Global average pooling that ignores padding positions.
+    Takes [sequence_output, original_token_ids] as input.
+    Only averages over positions where token_id != 0.
+    """
+    def call(self, inputs):
+        x, token_ids = inputs
+        mask = tf.cast(tf.not_equal(token_ids, 0), tf.float32)  # (batch, seq_len)
+        mask = mask[:, :, tf.newaxis]                            # (batch, seq_len, 1)
+        return tf.reduce_sum(x * mask, axis=1) / (tf.reduce_sum(mask, axis=1) + 1e-9)
+
+
 def build_model(num_classes):
     """
     Build the Transformer model using the Keras Functional API.
@@ -245,32 +271,45 @@ def build_model(num_classes):
     # ── Input ───────────────────────────────────────────────────────
     inputs = Input(shape=(MAX_LEN,))
 
+    # ── Padding Mask ────────────────────────────────────────────────
+    # Sequences are padded with 0s to length 200. Without a mask,
+    # the attention mechanism treats padding as real words and attends
+    # to them — this drowns out the actual content.
+    #
+    # attention_mask: True for real tokens, False for padding (0)
+    # Shape: (batch, 1, seq_len) — broadcasts over all query positions
+    attention_mask = PaddingMask()(inputs)
+
     # ── Embedding + Scaling + Positional Encoding ───────────────────
     # The original Transformer paper scales embeddings by sqrt(d_model)
     # to keep the magnitude in a good range relative to positional encodings
+    scale_factor = np.sqrt(d_model)
     x = Embedding(input_dim=VOCAB_SIZE, output_dim=d_model)(inputs)
-    x = x * tf.math.sqrt(tf.cast(d_model, tf.float32))  # Scale embeddings
+    x = tf.keras.layers.Lambda(lambda t: t * scale_factor)(x)  # Scale embeddings
     x = PositionalEncoding(max_len=MAX_LEN, d_model=d_model)(x)
 
     # ── Transformer Blocks (x2 for more capacity) ───────────────────
     # Stacking 2 blocks lets the model learn more complex patterns.
     # Real transformers like BERT use 12 blocks, GPT-3 uses 96.
+    # We pass the attention_mask so padding tokens are ignored.
     x = TransformerBlock(
         d_model=d_model,
         num_heads=num_heads,
         ff_dim=ff_dim,
         dropout_rate=0.1
-    )(x)
+    )(x, mask=attention_mask)
     x = TransformerBlock(
         d_model=d_model,
         num_heads=num_heads,
         ff_dim=ff_dim,
         dropout_rate=0.1
-    )(x)
+    )(x, mask=attention_mask)
 
-    # ── Pooling ─────────────────────────────────────────────────────
-    # Average all 200 position outputs into a single vector
-    x = GlobalAveragePooling1D()(x)
+    # ── Masked Average Pooling ──────────────────────────────────────
+    # Average only the REAL token outputs, not the padding positions.
+    # Without this, the average would be diluted by meaningless padding.
+    # Takes [transformer_output, original_input] so it knows which positions are padding.
+    x = MaskedGlobalAveragePooling1D()([x, inputs])
 
     # ── Classification Head ─────────────────────────────────────────
     x = Dropout(0.2)(x)

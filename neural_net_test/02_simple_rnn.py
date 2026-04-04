@@ -89,7 +89,6 @@ def build_model(num_classes):
             units=64,                    # Hidden state size
             return_sequences=False,      # Only return the final state
             dropout=0.2,                 # Dropout on inputs (prevents overfitting)
-            recurrent_dropout=0.2        # Dropout on hidden state connections
         ),
 
         # Layer 3: Hidden dense layer
@@ -109,7 +108,11 @@ def train_and_evaluate():
     """Main training pipeline."""
 
     data = load_data()
-    X_train, X_test = data['X_train'], data['X_test']
+
+    # Vanilla RNNs can't handle 200-step sequences (vanishing gradients).
+    # Truncate to 50 tokens so gradients can actually flow back.
+    RNN_MAX_LEN = 50
+    X_train, X_test = data['X_train'][:, :RNN_MAX_LEN], data['X_test'][:, :RNN_MAX_LEN]
     y_train, y_test = data['y_train'], data['y_test']
     num_classes = data['num_classes']
     class_weights = data['class_weights']
