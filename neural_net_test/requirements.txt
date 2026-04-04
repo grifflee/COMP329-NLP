@@ -1,0 +1,6 @@
+tensorflow-macos>=2.15
+tensorflow-metal>=1.1
+pandas
+numpy
+scikit-learn
+matplotlib

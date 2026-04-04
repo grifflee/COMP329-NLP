@@ -1,0 +1,8 @@
+{
+  "model": "04_CNN_Text",
+  "test_accuracy": 0.4456273019313812,
+  "test_loss": 2.8783533573150635,
+  "epochs_trained": 15,
+  "final_train_acc": 0.8154336810112,
+  "final_val_acc": 0.4455920457839966
+}

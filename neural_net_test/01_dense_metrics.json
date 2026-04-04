@@ -1,0 +1,8 @@
+{
+  "model": "01_Dense_Feedforward",
+  "test_accuracy": 0.24533210694789886,
+  "test_loss": 2.346217393875122,
+  "epochs": 10,
+  "final_train_acc": 0.2942427396774292,
+  "final_val_acc": 0.24775604903697968
+}

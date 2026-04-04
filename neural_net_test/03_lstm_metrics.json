@@ -1,0 +1,8 @@
+{
+  "model": "03_Bidirectional_LSTM",
+  "test_accuracy": 0.24370849132537842,
+  "test_loss": 2.800783157348633,
+  "epochs_trained": 15,
+  "final_train_acc": 0.393915057182312,
+  "final_val_acc": 0.25378090143203735
+}
