@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 neural_net_test/05_transformer.py)"
+      "Bash(python3 neural_net_test/05_transformer.py)",
+      "Bash(python neural_net_test/02_simple_rnn.py)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.13/bin/python3 neural_net_test/02_simple_rnn.py)"
     ]
   }
 }

@@ -60,6 +60,8 @@ import os
 import sys
 import json
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 
@@ -85,7 +87,7 @@ def build_model(num_classes):
         # Layer 1: Word embeddings
         Embedding(
             input_dim=VOCAB_SIZE,
-            output_dim=64,
+            output_dim=128,
         ),
 
         # Layer 2: Conv1D — the star of this model
@@ -117,10 +119,10 @@ def build_model(num_classes):
         GlobalMaxPooling1D(),
 
         # Layer 4: Hidden dense layer
-        Dense(64, activation='relu'),
+        Dense(128, activation='relu'),
 
         # Layer 5: Dropout
-        Dropout(0.3),
+        Dropout(0.5),
 
         # Layer 6: Output
         Dense(num_classes, activation='softmax')
@@ -143,7 +145,7 @@ def train_and_evaluate():
     model = build_model(num_classes)
 
     model.compile(
-        optimizer='adam',
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=0.5),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -152,18 +154,20 @@ def train_and_evaluate():
 
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor='val_accuracy',
-        patience=3,
+        patience=8,
         restore_best_weights=True
     )
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5
+    )
 
-    print("\n🚀 Training CNN (should be faster than LSTM!)...")
+    print("\n🚀 Training CNN...")
     history = model.fit(
         X_train, y_train,
-        epochs=15,
-        batch_size=128,
+        epochs=60,
+        batch_size=64,
         validation_split=0.15,
-        class_weight=class_weights,
-        callbacks=[early_stop],
+        callbacks=[early_stop, reduce_lr],
         verbose=1
     )
 

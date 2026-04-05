@@ -32,6 +32,8 @@ import os
 import sys
 import json
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -102,17 +104,17 @@ def build_model(num_classes):
         # Layer 1: Convert word IDs → dense vectors
         Embedding(
             input_dim=VOCAB_SIZE,        # Vocabulary size (20,000 words)
-            output_dim=64,               # Each word becomes a 64-dim vector
+            output_dim=128,              # Each word becomes a 128-dim vector
         ),
 
         # Layer 2: Average all word vectors into one description vector
         GlobalAveragePooling1D(),
 
         # Layer 3: Hidden layer — learns patterns in the averaged vector
-        Dense(64, activation='relu'),
+        Dense(128, activation='relu'),
 
         # Layer 4: Dropout — prevents overfitting
-        Dropout(0.3),
+        Dropout(0.5),
 
         # Layer 5: Output — one probability per genre
         Dense(num_classes, activation='softmax')
@@ -154,7 +156,7 @@ def train_and_evaluate():
     #   metrics=['accuracy'] — What we track during training (% correct).
     #
     model.compile(
-        optimizer='adam',
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=0.5),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -180,13 +182,20 @@ def train_and_evaluate():
     #     Mistakes on rare genres (war) cost MORE than mistakes on common
     #     genres (drama). This prevents the model from just predicting "drama".
     #
-    print("\n🚀 Training for 10 epochs...")
+    early_stop = tf.keras.callbacks.EarlyStopping(
+        monitor='val_accuracy', patience=8, restore_best_weights=True
+    )
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5
+    )
+
+    print("\n🚀 Training Dense model...")
     history = model.fit(
         X_train, y_train,
-        epochs=10,
-        batch_size=128,
+        epochs=60,
+        batch_size=64,
         validation_split=0.15,
-        class_weight=class_weights,
+        callbacks=[early_stop, reduce_lr],
         verbose=1
     )
 
@@ -234,7 +243,7 @@ def train_and_evaluate():
         'model': '01_Dense_Feedforward',
         'test_accuracy': float(test_acc),
         'test_loss': float(test_loss),
-        'epochs': 10,
+        'epochs_trained': len(history.history['accuracy']),
         'final_train_acc': float(history.history['accuracy'][-1]),
         'final_val_acc': float(history.history['val_accuracy'][-1]),
     }

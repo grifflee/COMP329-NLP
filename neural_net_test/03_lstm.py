@@ -71,6 +71,8 @@ import os
 import sys
 import json
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 
@@ -97,7 +99,7 @@ def build_model(num_classes):
         # Layer 1: Word embeddings
         Embedding(
             input_dim=VOCAB_SIZE,
-            output_dim=64,
+            output_dim=128,
         ),
 
         # Layer 2: Bidirectional LSTM
@@ -111,18 +113,17 @@ def build_model(num_classes):
         #
         Bidirectional(
             LSTM(
-                units=64,                # Hidden state size per direction
-                dropout=0.2,             # Input dropout
-                recurrent_dropout=0.2    # Recurrent dropout
+                units=128,               # Hidden state size per direction
+                dropout=0.3,             # Input dropout
             )
         ),
-        # Output shape: (batch_size, 128) — because 64 × 2 directions
+        # Output shape: (batch_size, 256) — because 128 × 2 directions
 
         # Layer 3: Hidden dense layer
-        Dense(32, activation='relu'),
+        Dense(64, activation='relu'),
 
         # Layer 4: Dropout
-        Dropout(0.3),
+        Dropout(0.5),
 
         # Layer 5: Output
         Dense(num_classes, activation='softmax')
@@ -145,7 +146,7 @@ def train_and_evaluate():
     model = build_model(num_classes)
 
     model.compile(
-        optimizer='adam',
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=0.5),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -155,26 +156,23 @@ def train_and_evaluate():
     # Callbacks
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor='val_accuracy',
-        patience=3,
+        patience=8,
         restore_best_weights=True
     )
 
-    # ReduceLROnPlateau: if validation loss stops improving,
-    # reduce the learning rate to allow finer-grained updates
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss',
-        factor=0.5,              # Multiply LR by 0.5
-        patience=2,              # Wait 2 epochs before reducing
-        min_lr=1e-6              # Don't go below this LR
+        factor=0.5,
+        patience=3,
+        min_lr=1e-5
     )
 
-    print("\n🚀 Training Bidirectional LSTM (this will be slower than RNN)...")
+    print("\n🚀 Training Bidirectional LSTM...")
     history = model.fit(
         X_train, y_train,
-        epochs=15,
-        batch_size=128,
+        epochs=60,
+        batch_size=64,
         validation_split=0.15,
-        class_weight=class_weights,
         callbacks=[early_stop, reduce_lr],
         verbose=1
     )

@@ -85,6 +85,8 @@ import os
 import sys
 import json
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 
@@ -338,7 +340,7 @@ def train_and_evaluate():
     # Transformers are notoriously sensitive to learning rate.
     # 5e-4 is a common starting point for small transformers.
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=0.5),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -347,18 +349,20 @@ def train_and_evaluate():
 
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor='val_accuracy',
-        patience=5,              # More patience — transformers warm up slowly
+        patience=8,
         restore_best_weights=True
     )
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5
+    )
 
-    print("\n🚀 Training Transformer (the most complex model)...")
+    print("\n🚀 Training Transformer...")
     history = model.fit(
         X_train, y_train,
-        epochs=20,
-        batch_size=128,
+        epochs=60,
+        batch_size=64,
         validation_split=0.15,
-        class_weight=class_weights,
-        callbacks=[early_stop],
+        callbacks=[early_stop, reduce_lr],
         verbose=1
     )
 

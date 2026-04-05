@@ -52,6 +52,8 @@ import os
 import sys
 import json
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend (no plt.show() window)
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 
@@ -60,7 +62,7 @@ from shared.preprocessing import load_data, VOCAB_SIZE, MAX_LEN
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, SimpleRNN, Dense, Dropout
+from tensorflow.keras.layers import Embedding, SimpleRNN, Dense, Dropout, GlobalAveragePooling1D
 
 
 def build_model(num_classes):
@@ -76,26 +78,19 @@ def build_model(num_classes):
         # Layer 1: Word embeddings (same as Model 1)
         Embedding(
             input_dim=VOCAB_SIZE,
-            output_dim=64,
+            output_dim=128,
         ),
 
-        # Layer 2: Simple RNN
-        #   - Reads 200 word vectors one by one
-        #   - Maintains a hidden state of size 64
-        #   - return_sequences=False means only output the FINAL hidden state
-        #     (the one after reading the last word)
-        #   - If True, it would output a hidden state at EVERY step (200 outputs)
         SimpleRNN(
-            units=64,                    # Hidden state size
-            return_sequences=False,      # Only return the final state
-            dropout=0.2,                 # Dropout on inputs (prevents overfitting)
+            units=128,
+            return_sequences=True,
+            dropout=0.4,
         ),
 
-        # Layer 3: Hidden dense layer
-        Dense(32, activation='relu'),
+        GlobalAveragePooling1D(),
 
-        # Layer 4: Dropout
-        Dropout(0.3),
+        Dense(64, activation='relu'),
+        Dropout(0.6),
 
         # Layer 5: Output layer
         Dense(num_classes, activation='softmax')
@@ -111,8 +106,9 @@ def train_and_evaluate():
 
     # Vanilla RNNs can't handle 200-step sequences (vanishing gradients).
     # Truncate to 50 tokens so gradients can actually flow back.
-    RNN_MAX_LEN = 50
-    X_train, X_test = data['X_train'][:, :RNN_MAX_LEN], data['X_test'][:, :RNN_MAX_LEN]
+    # Use full sequences — GlobalAvgPool averages all hidden states,
+    # so vanishing gradients matter less (early states still contribute)
+    X_train, X_test = data['X_train'], data['X_test']
     y_train, y_test = data['y_train'], data['y_test']
     num_classes = data['num_classes']
     class_weights = data['class_weights']
@@ -122,7 +118,7 @@ def train_and_evaluate():
     model = build_model(num_classes)
 
     model.compile(
-        optimizer='adam',
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=0.5),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -133,18 +129,25 @@ def train_and_evaluate():
     # to stop early if validation accuracy stops improving
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor='val_accuracy',
-        patience=3,                  # Stop if no improvement for 3 epochs
+        patience=8,                  # Stop if no improvement for 8 epochs
         restore_best_weights=True    # Keep the best model, not the last one
+    )
+
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,
+        patience=3,
+        min_lr=1e-5
     )
 
     print("\n🚀 Training Simple RNN (this may take a few minutes)...")
     history = model.fit(
         X_train, y_train,
-        epochs=15,
-        batch_size=128,
+        epochs=60,
+        batch_size=64,
         validation_split=0.15,
-        class_weight=class_weights,
-        callbacks=[early_stop],
+        # class_weight=class_weights,  # Removed: hurts generalization with 27 imbalanced classes
+        callbacks=[early_stop, reduce_lr],
         verbose=1
     )
 

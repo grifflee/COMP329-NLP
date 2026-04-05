@@ -1,8 +1,8 @@
 {
   "model": "02_Simple_RNN",
-  "test_accuracy": 0.029298892244696617,
-  "test_loss": 3.284868001937866,
-  "epochs_trained": 4,
-  "final_train_acc": 0.009591805748641491,
-  "final_val_acc": 0.008483954705297947
+  "test_accuracy": 0.47424355149269104,
+  "test_loss": 1.8788269758224487,
+  "epochs_trained": 30,
+  "final_train_acc": 0.5450836420059204,
+  "final_val_acc": 0.47227343916893005
 }

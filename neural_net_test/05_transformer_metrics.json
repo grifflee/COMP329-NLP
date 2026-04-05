@@ -1,8 +1,8 @@
 {
   "model": "05_Transformer",
-  "test_accuracy": 0.007804428227245808,
-  "test_loss": 3.298103094100952,
-  "epochs_trained": 4,
-  "final_train_acc": 0.005381827708333731,
-  "final_val_acc": 0.002950940513983369
+  "test_accuracy": 0.5652583241462708,
+  "test_loss": 1.544319748878479,
+  "epochs_trained": 12,
+  "final_train_acc": 0.9370673298835754,
+  "final_val_acc": 0.4976023733615875
 }
